@@ -27,5 +27,8 @@ output_transformed.xlsx
 build/
 dist/
 
+# 部署包
+deployment/
+
 # 临时文件
 文件清单.txt
