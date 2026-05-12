@@ -1,0 +1,103 @@
+任务：将工单数据转换为排班表JSON。
+
+# 输入数据
+{DATA_TEXT}
+
+# 输出格式（严格遵守）
+
+对每个唯一的計劃開始時間日期，必须输出：
+1. date（格式："5月04日"）
+2. type（"normal"或"special"）
+3. time_range（normal类型）或 time_points（special类型）
+4. work_orders（工单列表）
+
+# 判断规则
+
+**normal**: 周一至周五 且 时间连续（间隔<1小时）
+**special**: 周末(周六/周日) 或 时间间隔≥1小时
+
+# JSON格式要求（必须严格遵守）
+
+```json
+{
+  "schedule": [
+    {
+      "date": "5月04日",
+      "type": "normal",
+      "time_range": "18:00 至 19:00",
+      "work_orders": [
+        {
+          "person": "黃懌靜",
+          "content": "(中台) 2249 RMS 黃懌靜"
+        }
+      ]
+    },
+    {
+      "date": "5月07日",
+      "type": "normal",
+      "time_range": "18:00 至 20:00",
+      "work_orders": [
+        {
+          "person": "晏鵬禹",
+          "content": "(中台) 2241 CCM 晏鵬禹"
+        },
+        {
+          "person": "王文斌",
+          "content": "(中台) 2237 TBU 王文斌"
+        }
+      ]
+    },
+    {
+      "date": "5月09日",
+      "type": "normal",
+      "time_range": "12:00 至 12:30",
+      "work_orders": [
+        {
+          "person": "陳智龍",
+          "content": "(中台) 2167 MGS 陳智龍"
+        }
+      ]
+    },
+    {
+      "date": "5月10日",
+      "type": "special",
+      "time_points": ["01:00", "02:00", "03:00", "06:00", "10:00", "11:00"],
+      "work_orders": [
+        {
+          "person": "張雋宇",
+          "content": "(中台) 2197 AAS 張雋宇"
+        },
+        {
+          "person": "廖智堅",
+          "content": "(中台) 2224 GSW 廖智堅"
+        },
+        {
+          "person": "楊行健",
+          "content": "(中台) 2234 CCS 楊行健"
+        }
+      ]
+    }
+  ],
+  "filtered_source_data": [
+    {
+      "工單號": "MOBG-2026-02249",
+      "工单状态": "進行中",
+      "提單人": "黃懌靜/mo163007",
+      "變更名稱": "RMS系统功能及安全漏洞修復_20260504",
+      "變更系統名稱匯總": "RMS-招聘管理系統",
+      "計劃開始時間": "2026-05-04 18:00:00",
+      "計劃結束時間": "2026-05-04 19:00:00"
+    }
+  ]
+}
+```
+
+# 重要规则
+
+1. **每个日期必须有work_orders数组**（不能为空）
+2. **每个work_order必须包含person和content字段**
+3. **content格式**: `(中台) {工单号后4位} {系统缩写} {中文姓名}`
+4. **系统缩写**: 从變更名稱提取2+连续大写字母（如RMS, CCM, MGS, CCS, AAS, GSW）
+5. **filtered_source_data**: 必须包含所有源字段（使用中文列名）
+
+直接输出JSON，不要有任何其他文字：

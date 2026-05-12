@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 输出文件
+output_transformed.xlsx
+*.log
+
+# PyInstaller
+*.spec
+build/
+dist/
+
+# 临时文件
+文件清单.txt
