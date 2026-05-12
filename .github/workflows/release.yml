@@ -1,0 +1,175 @@
+name: Release
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Build Windows executable
+      run: |
+        pyinstaller --onefile --clean `
+          --add-data "config.ini;." `
+          --add-data "prompts;prompts" `
+          --add-data "data;data" `
+          --hidden-import openpyxl `
+          --hidden-import pandas `
+          --hidden-import openai `
+          --hidden-import configparser `
+          --name ScheduleGenerator `
+          --console `
+          main.py
+
+    - name: Create deployment package
+      run: |
+        mkdir deployment
+        copy dist\ScheduleGenerator.exe deployment\
+        copy config.ini deployment\
+        copy README_CN.md deployment\
+        copy WINDOWS_README.md deployment\
+        copy deployment\README.md deployment\ 2>nul || echo No deployment README
+        xcopy prompts deployment\prompts\ /E /I
+        xcopy data deployment\data\ /E /I
+
+    - name: Create ZIP archive
+      run: |
+        cd deployment
+        7z a -tzip ../ScheduleGenerator-Windows.zip *
+
+    - name: Upload release asset
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ScheduleGenerator-Windows.zip
+          dist/ScheduleGenerator.exe
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-macos:
+    runs-on: macos-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip3 install -r requirements.txt
+        pip3 install pyinstaller
+
+    - name: Build macOS executable
+      run: |
+        pyinstaller --onefile --clean \
+          --add-data "config.ini:." \
+          --add-data "prompts:prompts" \
+          --add-data "data:data" \
+          --hidden-import openpyxl \
+          --hidden-import pandas \
+          --hidden-import openai \
+          --hidden-import configparser \
+          --name ScheduleGenerator \
+          --console \
+          main.py
+
+    - name: Create deployment package
+      run: |
+        mkdir deployment
+        cp dist/ScheduleGenerator deployment/
+        cp config.ini deployment/
+        cp README_CN.md deployment/
+        cp -r prompts deployment/
+        cp -r data deployment/
+
+    - name: Create ZIP archive
+      run: |
+        cd deployment
+        zip -r ../ScheduleGenerator-macOS.zip *
+
+    - name: Upload release asset
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ScheduleGenerator-macOS.zip
+          dist/ScheduleGenerator
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python3 -m pip install --upgrade pip
+        pip3 install -r requirements.txt
+        pip3 install pyinstaller
+
+    - name: Build Linux executable
+      run: |
+        pyinstaller --onefile --clean \
+          --add-data "config.ini:." \
+          --add-data "prompts:prompts" \
+          --add-data "data:data" \
+          --hidden-import openpyxl \
+          --hidden-import pandas \
+          --hidden-import openai \
+          --hidden-import configparser \
+          --name ScheduleGenerator \
+          --console \
+          main.py
+
+    - name: Create deployment package
+      run: |
+        mkdir deployment
+        cp dist/ScheduleGenerator deployment/
+        cp config.ini deployment/
+        cp README_CN.md deployment/
+        cp -r prompts deployment/
+        cp -r data deployment/
+
+    - name: Create TAR.GZ archive
+      run: |
+        cd deployment
+        tar -czf ../ScheduleGenerator-Linux.tar.gz *
+
+    - name: Upload release asset
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          ScheduleGenerator-Linux.tar.gz
+          dist/ScheduleGenerator
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

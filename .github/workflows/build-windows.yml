@@ -1,0 +1,70 @@
+name: Build Windows Executable
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '**.py'
+      - 'config.ini'
+      - 'requirements.txt'
+      - '.github/workflows/build-windows.yml'
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+
+    - name: Build executable with PyInstaller
+      run: |
+        pyinstaller --onefile --clean `
+          --add-data "config.ini;." `
+          --add-data "prompts;prompts" `
+          --add-data "data;data" `
+          --hidden-import openpyxl `
+          --hidden-import pandas `
+          --hidden-import openai `
+          --hidden-import configparser `
+          --name ScheduleGenerator `
+          --console `
+          main.py
+
+    - name: Create deployment package
+      run: |
+        mkdir deployment
+        copy dist\ScheduleGenerator.exe deployment\
+        copy config.ini deployment\
+        copy README_CN.md deployment\
+        copy WINDOWS_README.md deployment\
+        xcopy prompts deployment\prompts\ /E /I
+        xcopy data deployment\data\ /E /I
+
+    - name: Upload executable as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ScheduleGenerator-Windows
+        path: deployment/
+        retention-days: 30
+
+    - name: Upload exe separately
+      uses: actions/upload-artifact@v4
+      with:
+        name: ScheduleGenerator-exe-only
+        path: dist/ScheduleGenerator.exe
+        retention-days: 30
