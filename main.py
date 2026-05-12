@@ -73,7 +73,7 @@ def main():
 
     # 生成Excel文件
     try:
-        excel_generator.generate_excel(json_data, config['output_file'])
+        excel_generator.generate_excel(json_data, config['output_file'], df_filtered)
     except Exception as e:
         print(f"\n✗ Excel generation failed: {e}")
         import traceback

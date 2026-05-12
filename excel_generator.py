@@ -279,13 +279,14 @@ def create_data_sheet(ws, filtered_data):
     print(f"  ✓ Data sheet created with {len(filtered_data)} rows")
 
 
-def generate_excel(json_data, output_file):
+def generate_excel(json_data, output_file, df_filtered=None):
     """
     生成Excel文件
 
     Args:
         json_data: AI返回的JSON数据
         output_file: 输出文件路径
+        df_filtered: 过滤后的DataFrame（用于创建完整的数据报表）
     """
     print(f"\n[5/5] Generating Excel file...")
 
@@ -301,7 +302,16 @@ def generate_excel(json_data, output_file):
     # 创建数据明细sheet
     data_sheet_config = output_metadata.get_data_sheet_config()
     ws_data = wb.create_sheet(data_sheet_config['name'])
-    create_data_sheet(ws_data, json_data['filtered_source_data'])
+
+    # 使用完整的DataFrame创建数据报表（如果提供）
+    if df_filtered is not None:
+        # 将DataFrame转换为字典列表，保留所有列
+        filtered_data = df_filtered.to_dict('records')
+        create_data_sheet(ws_data, filtered_data)
+        print(f"  ✓ Data sheet created with {len(df_filtered.columns)} columns")
+    else:
+        # 回退到AI返回的数据（可能不完整）
+        create_data_sheet(ws_data, json_data['filtered_source_data'])
 
     # 保存文件
     wb.save(output_file)

@@ -705,7 +705,7 @@ def post_process_json_data(data):
 
 def validate_and_fix_data_completeness(data, ai_data_text):
     """
-    验证数据完整性，确保没有遗漏工单
+    验证数据完整性，自动补充遗漏的工单
 
     Args:
         data: AI返回的数据
@@ -714,43 +714,134 @@ def validate_and_fix_data_completeness(data, ai_data_text):
     Returns:
         dict: 修复后的数据
     """
-    print(f"\n[4.6/5] Validating data completeness...")
+    print(f"\n[4.6/5] Validating and fixing data completeness...")
 
-    # 从ai_data_text中提取工单号列表
     import re
-    work_orders_in_input = set()
+    from datetime import datetime
 
-    # 查找所有工單號
-    matches = re.findall(r'工單號:\s*([A-Z]+-\d+)', ai_data_text)
-    for match in matches:
-        work_orders_in_input.add(match)
+    # 提取系统缩写的辅助函数
+    def extract_english_abbr(system_name, change_name):
+        """从系统名称或变更名称中提取英文缩写"""
+        if pd.isna(system_name) if hasattr(pd, 'isna') else system_name is None:
+            system_name = ""
+        if pd.isna(change_name) if hasattr(pd, 'isna') else change_name is None:
+            change_name = ""
 
-    # 从filtered_source_data中提取工单号
-    work_orders_in_output = set()
-    if 'filtered_source_data' in data:
-        for row in data['filtered_source_data']:
-            work_order = row.get('工單號', '')
-            if work_order:
-                work_orders_in_output.add(work_order)
+        system_name = str(system_name).strip()
+        change_name = str(change_name).strip()
 
-    # 检查是否有遗漏
-    missing_work_orders = work_orders_in_input - work_orders_in_output
-    if missing_work_orders:
-        print(f"  ⚠ Warning: {len(missing_work_orders)} work orders may be missing")
-        for wo in list(missing_work_orders)[:5]:
-            print(f"     - {wo}")
-        if len(missing_work_orders) > 5:
-            print(f"     - ... and {len(missing_work_orders) - 5} more")
+        # 正则表达式：匹配2个或更多连续的大写字母
+        pattern = r'([A-Z]{2,})'
+
+        # 1. 先从 change_name 中查找
+        match = re.search(pattern, change_name)
+        if match:
+            return match.group(1)
+
+        # 2. 再从 system_name 中查找
+        match = re.search(pattern, system_name)
+        if match:
+            return match.group(1)
+
+        return "XXX"
+
+    # 从ai_data_text中提取所有工单信息
+    work_orders_input = []
+    current_order = {}
+    lines = ai_data_text.split('\n')
+
+    for line in lines:
+        if '工單號:' in line:
+            if current_order:  # 保存上一个工单
+                work_orders_input.append(current_order)
+            # 开始新工单
+            current_order = {'工單號': line.split(':', 1)[1].strip()}
+        elif current_order and line.strip():
+            key_val = line.split(':', 1)
+            if len(key_val) == 2:
+                key = key_val[0].strip()
+                value = key_val[1].strip()
+                current_order[key] = value
+
+    if current_order:
+        work_orders_input.append(current_order)
+
+    # 为每个工单添加到对应的日期
+    for wo in work_orders_input:
+        if '計劃開始時間' in wo:
+            try:
+                dt = datetime.strptime(wo['計劃開始時間'], '%Y-%m-%d %H:%M:%S')
+                date_str = f"{dt.month}月{dt.day:02d}日"
+                wo['date'] = date_str
+                wo['datetime'] = dt
+            except:
+                pass
+
+    print(f"  ✓ Found {len(work_orders_input)} work orders in input")
+
+    # 检查schedule中遗漏的工单
+    schedule_by_date = {}
+    for item in data.get('schedule', []):
+        date = item['date']
+        schedule_by_date[date] = item
+        # 记录已有的工单号
+        item['existing_work_orders'] = set()
+        for wo in item.get('work_orders', []):
+            content = wo.get('content', '')
+            # 提取工单号后4位
+            match = re.search(r'(\d{4})', content)
+            if match:
+                item['existing_work_orders'].add(match.group(1))
+
+    # 找出遗漏的工单并补充
+    added_count = 0
+    for wo in work_orders_input:
+        wo_num = wo['工單號'][-4:]
+        date = wo.get('date', '')
+
+        if date in schedule_by_date:
+            schedule_item = schedule_by_date[date]
+            existing = schedule_item.get('existing_work_orders', set())
+
+            if wo_num not in existing:
+                # 这个工单被遗漏了，需要添加
+                print(f"  ⚠ Adding missing work order: {wo_num} ({wo.get('提單人', 'N/A')}) to {date}")
+
+                # 提取系统缩写
+                system_name = wo.get('變更系統名稱匯總', '')
+                change_name = wo.get('變更名稱', '')
+                abbr = extract_english_abbr(system_name, change_name)
+
+                # 提取姓名
+                submitter = wo.get('提單人', '')
+                match = re.match(r'([^/]+)', submitter)
+                chinese_name = match.group(1) if match else submitter
+
+                # 创建work_order对象
+                new_work_order = {
+                    'person': chinese_name,
+                    'content': f"(中台) {wo_num} {abbr} {chinese_name}"
+                }
+
+                # 如果是special类型，需要添加time_start和time_end
+                if schedule_item['type'] == 'special':
+                    try:
+                        dt_start = wo.get('datetime')
+                        dt_end = datetime.strptime(wo['計劃結束時間'], '%Y-%m-%d %H:%M:%S')
+                        time_start = dt_start.strftime('%H:%M')
+                        time_end = dt_end.strftime('%H:%M')
+                        new_work_order['time_start'] = time_start
+                        new_work_order['time_end'] = time_end
+                    except:
+                        pass
+
+                schedule_item['work_orders'].append(new_work_order)
+                added_count += 1
+
+    if added_count > 0:
+        print(f"  ✓ Added {added_count} missing work orders to schedule")
     else:
-        print(f"  ✓ All work orders are present")
-
-    # 从schedule中统计工单数量
-    total_work_orders_in_schedule = 0
-    for schedule_item in data.get('schedule', []):
-        total_work_orders_in_schedule += len(schedule_item.get('work_orders', []))
-
-    print(f"  ✓ Total work orders in schedule: {total_work_orders_in_schedule}")
-    print(f"  ✓ Total rows in filtered_source_data: {len(data.get('filtered_source_data', []))}")
+        print(f"  ✓ All work orders are present in schedule")
 
     return data
 

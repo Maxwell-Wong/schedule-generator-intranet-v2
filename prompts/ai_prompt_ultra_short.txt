@@ -13,8 +13,17 @@
 
 # 判断规则
 
+**重要**: 必须正确判断日期是星期几！
+
 **normal**: 周一至周五 且 时间连续（间隔<1小时）
-**special**: 周末(周六/周日) 或 时间间隔≥1小时
+**special**: 周六或周日（无论时间是否连续）或 时间间隔≥1小时
+
+**日期判断示例**:
+- 2026-05-04 (周一) → normal
+- 2026-05-05 (周二) → normal
+- 2026-05-07 (周四) → normal
+- 2026-05-09 (周六) → special
+- 2026-05-10 (周日) → special
 
 # JSON格式要求（必须严格遵守）
 
@@ -49,8 +58,8 @@
     },
     {
       "date": "5月09日",
-      "type": "normal",
-      "time_range": "12:00 至 12:30",
+      "type": "special",
+      "time_points": ["12:00", "12:30"],
       "work_orders": [
         {
           "person": "陳智龍",
@@ -65,15 +74,21 @@
       "work_orders": [
         {
           "person": "張雋宇",
-          "content": "(中台) 2197 AAS 張雋宇"
+          "content": "(中台) 2197 AAS 張雋宇",
+          "time_start": "01:00",
+          "time_end": "02:00"
         },
         {
           "person": "廖智堅",
-          "content": "(中台) 2224 GSW 廖智堅"
+          "content": "(中台) 2224 GSW 廖智堅",
+          "time_start": "03:00",
+          "time_end": "06:00"
         },
         {
           "person": "楊行健",
-          "content": "(中台) 2234 CCS 楊行健"
+          "content": "(中台) 2234 CCS 楊行健",
+          "time_start": "10:00",
+          "time_end": "11:00"
         }
       ]
     }
@@ -95,9 +110,12 @@
 # 重要规则
 
 1. **每个日期必须有work_orders数组**（不能为空）
-2. **每个work_order必须包含person和content字段**
-3. **content格式**: `(中台) {工单号后4位} {系统缩写} {中文姓名}`
-4. **系统缩写**: 从變更名稱提取2+连续大写字母（如RMS, CCM, MGS, CCS, AAS, GSW）
-5. **filtered_source_data**: 必须包含所有源字段（使用中文列名）
+2. **每个work_order必须包含**: person, content字段
+3. **special类型的work_order还必须包含**: time_start, time_end字段
+4. **content格式**: `(中台) {工单号后4位} {系统缩写} {中文姓名}`
+5. **系统缩写**: 从變更名稱提取2+连续大写字母（如RMS, CCM, MGS, CCS, AAS, GSW）
+6. **filtered_source_data**: 必须包含所有源字段（使用中文列名）
+7. **special类型的time_points**: 必须包含所有工单的开始时间和结束时间，去重后按升序排列
+8. **time_start和time_end**: 格式为"HH:MM"，必须对应工单的实际开始和结束时间
 
 直接输出JSON，不要有任何其他文字：
