@@ -82,9 +82,10 @@ def process_source_data(source_file, config=None):
     try:
         # 尝试读取"变更明细数据报表"sheet，如果不存在则读取第一个sheet
         xls = pd.ExcelFile(source_file)
-        if '变更明细数据报表' in xls.sheet_names:
-            df = pd.read_excel(source_file, sheet_name='变更明细数据报表')
-            print(f"  [OK] Reading sheet: 变更明细数据报表")
+        sheet_name = '变更明细数据报表'
+        if sheet_name in xls.sheet_names:
+            df = pd.read_excel(source_file, sheet_name=sheet_name)
+            print(f"  [OK] Reading sheet: {sheet_name}")
         else:
             df = pd.read_excel(source_file)
             print(f"  [OK] Reading first sheet: {xls.sheet_names[0]}")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# -*- co·ding: utf-8 -*-
+# -*- coding: utf-8 -*-
 
 """
 主入口
@@ -8,6 +8,12 @@
 
 import os
 import sys
+
+# 强制设置 UTF-8 编码输出（兼容 Windows）
+if sys.platform == 'win32':
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 import data_processor
 import ai_client
