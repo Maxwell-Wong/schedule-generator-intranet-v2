@@ -139,12 +139,17 @@ jobs:
 
         Write-Host "[OK] Test environment created"
 
-        # 测试可执行文件（预期会失败，因为没有真实数据）
-        & ".\ScheduleGenerator.exe" 2>&1 | Tee-Object -Variable output
-        if ($LASTEXITCODE -ne 0) {
-          Write-Host "[INFO] Executable validation completed (expected to fail without real data/API)"
+        # 测试可执行文件（验证能读取配置文件）
+        $output = & ".\ScheduleGenerator.exe" 2>&1 | Tee-Object -Variable output
+        Write-Host "Exit code: $LASTEXITCODE"
+
+        # 检查是否成功读取配置文件（即使没有输入文件）
+        if ($output -match "Configuration loaded") {
+          Write-Host "[OK] Executable successfully loaded configuration"
+          Write-Host "[OK] Validation PASSED - executable can read config.ini"
         } else {
-          Write-Host "[OK] Executable runs successfully"
+          Write-Host "[ERROR] Failed to load configuration"
+          exit 1
         }
 
         # 清理测试环境
