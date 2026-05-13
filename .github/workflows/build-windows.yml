@@ -105,26 +105,26 @@ jobs:
         Write-Host "Testing executable..."
 
         # 创建临时 config.ini 用于测试
-        @"
-[paths]
-input_file = data/sheet_input.xlsx
-output_file = output_transformed.xlsx
+        $configContent = "[paths]" + "`r`n"
+        $configContent += "input_file = data/sheet_input.xlsx" + "`r`n"
+        $configContent += "output_file = output_transformed.xlsx" + "`r`n"
+        $configContent += "`r`n"
+        $configContent += "[api]" + "`r`n"
+        $configContent += "api_key = test_key_for_validation" + "`r`n"
+        $configContent += "base_url = https://api.example.com/v1" + "`r`n"
+        $configContent += "model = test-model" + "`r`n"
+        $configContent += "max_tokens = 80000" + "`r`n"
+        $configContent += "`r`n"
+        $configContent += "[settings]" + "`r`n"
+        $configContent += "enable_ai_modify = true" + "`r`n"
+        $configContent += "thursday_person_count = 6" + "`r`n"
+        $configContent += "`r`n"
+        $configContent += "[filter]" + "`r`n"
+        $configContent += "removed_status = Removed" + "`r`n"
+        $configContent += "removed_teams = Team1,Team2,Team3" + "`r`n"
+        $configContent += "remove_serial_column = true" + "`r`n"
 
-[api]
-api_key = test_key_for_validation
-base_url = https://api.example.com/v1
-model = test-model
-max_tokens = 80000
-
-[settings]
-enable_ai_modify = true
-thursday_person_count = 6
-
-[filter]
-removed_status = Removed
-removed_teams = Team1,Team2,Team3
-remove_serial_column = true
-"@ | Out-File -FilePath "dist\config.ini" -Encoding UTF8
+        $configContent | Out-File -FilePath "dist\config.ini" -Encoding UTF8
 
         Write-Host "[OK] Test config.ini created"
 
