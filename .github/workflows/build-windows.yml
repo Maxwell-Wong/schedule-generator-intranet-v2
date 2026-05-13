@@ -27,6 +27,8 @@ jobs:
 
     - name: Verify all Python files exist
       run: |
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         Write-Host "Checking required Python files..."
         $requiredFiles = @(
           "main.py",
@@ -39,9 +41,9 @@ jobs:
 
         foreach ($file in $requiredFiles) {
           if (Test-Path $file) {
-            Write-Host "✓ Found: $file"
+            Write-Host "[OK] Found: $file"
           } else {
-            Write-Host "✗ Missing: $file"
+            Write-Host "[ERROR] Missing: $file"
             exit 1
           }
         }
@@ -54,12 +56,14 @@ jobs:
 
     - name: Verify imports work
       run: |
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         Write-Host "Testing Python imports..."
-        python -c "import output_metadata; print('✓ output_metadata imported')"
-        python -c "import formatters; print('✓ formatters imported')"
-        python -c "import excel_generator; print('✓ excel_generator imported')"
-        python -c "import data_processor; print('✓ data_processor imported')"
-        python -c "import ai_client; print('✓ ai_client imported')"
+        python -c "import output_metadata; print('[OK] output_metadata imported')"
+        python -c "import formatters; print('[OK] formatters imported')"
+        python -c "import excel_generator; print('[OK] excel_generator imported')"
+        python -c "import data_processor; print('[OK] data_processor imported')"
+        python -c "import ai_client; print('[OK] ai_client imported')"
 
     - name: Build executable with PyInstaller
       run: |
@@ -85,22 +89,26 @@ jobs:
 
     - name: Verify executable was created
       run: |
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         if (Test-Path "dist\ScheduleGenerator.exe") {
-          Write-Host "✓ Executable created successfully"
+          Write-Host "[OK] Executable created successfully"
           Get-Item "dist\ScheduleGenerator.exe" | Select-Object Name, Length
         } else {
-          Write-Host "✗ Executable not found"
+          Write-Host "[ERROR] Executable not found"
           exit 1
         }
 
     - name: Test executable
       run: |
+        $OutputEncoding = [System.Text.Encoding]::UTF8
+        [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         Write-Host "Testing executable..."
         $output = & "dist\ScheduleGenerator.exe" --help 2>&1
         if ($LASTEXITCODE -eq 0) {
-          Write-Host "✓ Executable runs successfully"
+          Write-Host "[OK] Executable runs successfully"
         } else {
-          Write-Host "⚠ Executable returned exit code: $LASTEXITCODE"
+          Write-Host "[WARNING] Executable returned exit code: $LASTEXITCODE"
           Write-Host "Output: $output"
         }
 
