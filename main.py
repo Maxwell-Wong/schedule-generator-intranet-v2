@@ -71,7 +71,7 @@ def main():
             rules_text,
             ai_data_text,
             config['thursday_person_count'],
-            config.get('max_tokens', 40000)
+            config.get('max_tokens', 128000)  # 增加默认值到128k
         )
     except Exception as e:
         print(f"\n[ERROR] AI processing failed: {e}")

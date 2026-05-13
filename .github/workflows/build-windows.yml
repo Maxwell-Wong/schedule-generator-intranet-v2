@@ -147,6 +147,10 @@ jobs:
           Write-Host "[OK] Executable runs successfully"
         }
 
+        # 清理测试环境
+        cd ..
+        Remove-Item -Recurse -Force test_environment
+
     - name: Create deployment package
       run: |
         mkdir deployment

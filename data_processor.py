@@ -15,7 +15,12 @@ def get_base_dir():
     """获取程序运行的基础目录，兼容 PyInstaller 打包后的环境"""
     if getattr(sys, 'frozen', False):
         # PyInstaller 打包后的环境
-        # 优先返回 _MEIPASS 临时目录（PyInstaller 解压资源的位置）
+        # 优先返回当前工作目录（用于查找 config.ini 等用户配置文件）
+        cwd = os.getcwd()
+        if os.path.exists(os.path.join(cwd, 'config.ini')):
+            return cwd
+
+        # 如果当前目录没有 config.ini，尝试 _MEIPASS 临时目录
         meipass = getattr(sys, '_MEIPASS', None)
         if meipass and os.path.exists(meipass):
             return meipass
