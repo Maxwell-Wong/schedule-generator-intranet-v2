@@ -10,6 +10,7 @@ import json
 import os
 import pandas as pd
 from openai import OpenAI
+import data_processor
 
 
 def load_prompt_template(template_file='prompts/ai_prompt_ultra_short.txt'):
@@ -22,13 +23,8 @@ def load_prompt_template(template_file='prompts/ai_prompt_ultra_short.txt'):
     Returns:
         str: 模板内容
     """
-    # 获取基础目录
-    import sys
-    if getattr(sys, 'frozen', False):
-        base_dir = os.path.dirname(os.path.abspath(sys.executable))
-    else:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-
+    # 使用统一的路径查找逻辑
+    base_dir = data_processor.get_base_dir()
     template_path = os.path.join(base_dir, template_file)
 
     if not os.path.exists(template_path):
