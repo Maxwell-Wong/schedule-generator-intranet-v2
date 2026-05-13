@@ -322,8 +322,8 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768, max_retries=
             print(f"  [OK] API call successful")
             print(f"  Response length: {len(content)} characters")
             return content.strip()
-        else:
-            raise ValueError("Invalid API response format")
+            else:
+                raise ValueError("Invalid API response format")
 
         except Exception as e:
             error_type = type(e).__name__
