@@ -104,7 +104,18 @@ jobs:
         [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
         Write-Host "Testing executable..."
 
-        # 创建临时 config.ini 用于测试
+        # 创建测试环境目录结构
+        mkdir test_environment -Force
+        cd test_environment
+
+        # 创建子目录
+        mkdir data -Force
+        mkdir prompts -Force
+
+        # 复制必要的文件
+        copy ..\dist\ScheduleGenerator.exe .
+
+        # 创建测试 config.ini
         $configContent = "[paths]" + "`r`n"
         $configContent += "input_file = data/sheet_input.xlsx" + "`r`n"
         $configContent += "output_file = output_transformed.xlsx" + "`r`n"
@@ -124,12 +135,12 @@ jobs:
         $configContent += "removed_teams = Team1,Team2,Team3" + "`r`n"
         $configContent += "remove_serial_column = true" + "`r`n"
 
-        $configContent | Out-File -FilePath "dist\config.ini" -Encoding UTF8
+        $configContent | Out-File -FilePath "config.ini" -Encoding UTF8
 
-        Write-Host "[OK] Test config.ini created"
+        Write-Host "[OK] Test environment created"
 
-        # 只验证程序能启动，不执行完整流程（需要真实API）
-        & "dist\ScheduleGenerator.exe" 2>&1 | Tee-Object -Variable output
+        # 测试可执行文件（预期会失败，因为没有真实数据）
+        & ".\ScheduleGenerator.exe" 2>&1 | Tee-Object -Variable output
         if ($LASTEXITCODE -ne 0) {
           Write-Host "[INFO] Executable validation completed (expected to fail without real data/API)"
         } else {
