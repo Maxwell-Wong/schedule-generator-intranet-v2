@@ -58,15 +58,17 @@ def assemble_prompt(rules_text, ai_data_text, thursday_count):
     return prompt
 
 
-def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768):
+def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768, max_retries=3):
     """
-    调用AI API
+    调用AI API（带重试机制）
 
     Args:
         api_key: API密钥
         base_url: API基础URL
         model: 模型名称
         prompt: 发送给AI的prompt
+        max_tokens: 最大输出tokens
+        max_retries: 最大重试次数（默认：3）
 
     Returns:
         str: AI的响应内容
@@ -91,9 +93,14 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768):
         if response.lower() != 'y':
             raise ValueError("User cancelled due to long prompt")
 
-    try:
-        print(f"  Sending request to API (this may take 1-3 minutes)...")
-        completion = client.chat.completions.create(
+    # 重试循环
+    for attempt in range(max_retries):
+        try:
+            if attempt > 0:
+                print(f"  [RETRY] Attempt {attempt + 1}/{max_retries}...")
+
+            print(f"  Sending request to API (this may take 1-3 minutes)...")
+            completion = client.chat.completions.create(
             model=model,
             messages=[
                 {
@@ -216,26 +223,52 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768):
         else:
             raise ValueError("Invalid API response format")
 
-    except Exception as e:
-        error_type = type(e).__name__
-        error_msg = str(e)
+        except Exception as e:
+            error_type = type(e).__name__
+            error_msg = str(e)
 
-        print(f"  [ERROR] API call failed: {error_type}: {error_msg}")
+            # 检查是否应该重试
+            should_retry = False
+            retry_reason = ""
 
-        # 针对不同错误类型给出建议
-        if 'timeout' in error_msg.lower() or 'Timeout' in error_type:
-            print(f"  💡 Suggestion: The request timed out. Possible reasons:")
-            print(f"     - Prompt is too long ({len(prompt)} characters)")
-            print(f"     - API server is overloaded")
-            print(f"     - Network connection is slow")
-            print(f"  💡 Try: Reduce prompt size or increase timeout parameter")
-        elif 'rate limit' in error_msg.lower():
-            print(f"  💡 Suggestion: Rate limit exceeded. Wait a moment and try again")
-        elif 'context' in error_msg.lower():
-            print(f"  💡 Suggestion: Prompt exceeds model context window")
-            print(f"  💡 Try: Reduce input data or use a model with larger context")
+            if '504' in error_msg or 'timeout' in error_msg.lower() or 'Timeout' in error_type:
+                should_retry = True
+                retry_reason = "Gateway timeout or request timeout"
+            elif '502' in error_msg or '503' in error_msg:
+                should_retry = True
+                retry_reason = "Server error or service unavailable"
+            elif 'rate limit' in error_msg.lower():
+                should_retry = True
+                retry_reason = "Rate limit exceeded"
 
-        raise
+            # 如果应该重试且还有重试次数
+            if should_retry and attempt < max_retries - 1:
+                print(f"  [WARNING] API call failed: {error_type}: {error_msg}")
+                print(f"  [RETRY] {retry_reason} - Retrying in 5 seconds...")
+                import time
+                time.sleep(5)
+                continue
+            else:
+                # 不重试或重试次数用完，抛出异常
+                print(f"  [ERROR] API call failed: {error_type}: {error_msg}")
+
+                if should_retry and attempt >= max_retries - 1:
+                    print(f"  [ERROR] Max retries ({max_retries}) exceeded")
+
+                # 针对不同错误类型给出建议
+                if 'timeout' in error_msg.lower() or 'Timeout' in error_type or '504' in error_msg:
+                    print(f"  💡 Suggestion: The request timed out. Possible reasons:")
+                    print(f"     - Prompt is too long ({len(prompt)} characters)")
+                    print(f"     - API server is overloaded")
+                    print(f"     - Network connection is slow")
+                    print(f"  💡 Try: Reduce prompt size or increase timeout parameter")
+                elif 'rate limit' in error_msg.lower():
+                    print(f"  💡 Suggestion: Rate limit exceeded. Wait a moment and try again")
+                elif 'context' in error_msg.lower():
+                    print(f"  💡 Suggestion: Prompt exceeds model context window")
+                    print(f"  💡 Try: Reduce input data or use a model with larger context")
+
+                raise
 
 
 def parse_ai_response(response_text):
@@ -1001,7 +1034,7 @@ def save_ai_response(data, raw_response=None, base_dir=None):
     return filepath
 
 
-def process_with_ai(api_key, base_url, model, rules_text, ai_data_text, thursday_count, max_tokens=32768, save_response=True):
+def process_with_ai(api_key, base_url, model, rules_text, ai_data_text, thursday_count, max_tokens=32768, save_response=True, max_retries=3):
     """
     使用AI处理数据
 
@@ -1021,7 +1054,7 @@ def process_with_ai(api_key, base_url, model, rules_text, ai_data_text, thursday
     prompt = assemble_prompt(rules_text, ai_data_text, thursday_count)
 
     # 调用AI API
-    response = call_ai_api(api_key, base_url, model, prompt, max_tokens)
+    response = call_ai_api(api_key, base_url, model, prompt, max_tokens, max_retries=max_retries)
 
     # 解析响应
     data = parse_ai_response(response)
