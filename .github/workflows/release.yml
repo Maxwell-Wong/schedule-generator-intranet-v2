@@ -74,7 +74,6 @@ jobs:
           --hidden-import ai_client `
           --collect-all openpyxl `
           --collect-all pandas `
-          --runtime-hook hooks/pyi_rth_inspect.py 2>nul || echo "No runtime hook needed" `
           --name ScheduleGenerator `
           --console `
           --log-level DEBUG `
