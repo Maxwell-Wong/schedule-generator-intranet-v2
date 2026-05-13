@@ -956,12 +956,13 @@ def validate_and_fix_data_completeness(data, ai_data_text):
     return data
 
 
-def save_ai_response(data, base_dir=None):
+def save_ai_response(data, raw_response=None, base_dir=None):
     """
     保存 AI 返回的 JSON 数据到文件
 
     Args:
-        data: AI 返回的 JSON 数据
+        data: AI 返回的 JSON 数据（解析后）
+        raw_response: AI 的原始响应文本（用于调试）
         base_dir: 基础目录（如果为 None，使用 get_base_dir()）
     """
     if base_dir is None:
@@ -976,11 +977,20 @@ def save_ai_response(data, base_dir=None):
     filename = f'ai_response_{timestamp}.json'
     filepath = os.path.join(output_dir, filename)
 
-    # 保存 JSON 文件
+    # 保存解析后的 JSON 文件
     with open(filepath, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-    print(f"\n[INFO] AI response saved to: {filepath}")
+    print(f"\n[INFO] Parsed JSON saved to: {filepath}")
+
+    # 保存原始响应（如果提供）
+    if raw_response:
+        raw_filename = f'ai_response_raw_{timestamp}.txt'
+        raw_filepath = os.path.join(output_dir, raw_filename)
+        with open(raw_filepath, 'w', encoding='utf-8') as f:
+            f.write(raw_response)
+        print(f"[INFO] Raw response saved to: {raw_filepath}")
+        print(f"[INFO] Raw response length: {len(raw_response)} characters")
 
     # 同时保存最新版本（方便访问）
     latest_path = os.path.join(output_dir, 'ai_response_latest.json')
@@ -1015,6 +1025,55 @@ def process_with_ai(api_key, base_url, model, rules_text, ai_data_text, thursday
 
     # 解析响应
     data = parse_ai_response(response)
+
+    # 检查解析后的数据是否完整
+    if isinstance(data, dict) and 'schedule' in data:
+        schedule = data['schedule']
+        if isinstance(schedule, list) and len(schedule) > 0:
+            last_item = schedule[-1]
+            # 检查最后一项是否完整
+            is_truncated = False
+
+            # 检查是否有未闭合的字段
+            for key, value in last_item.items():
+                # 如果字段值是字符串且看起来像被截断
+                if isinstance(value, str) and len(value) > 0:
+                    # 检查是否以不完整的字符结尾
+                    if value.rstrip().endswith(('...', '、', ',', '、')):
+                        is_truncated = True
+                        break
+
+                # 检查是否有应该是列表但不是的字段
+                if key in ['work_orders', 'existing_work_orders', 'time_points']:
+                    if not isinstance(value, list):
+                        is_truncated = True
+                        print(f"  [ERROR] Field '{key}' should be a list but got: {type(value).__name__}")
+                        break
+
+            if is_truncated:
+                print(f"  [ERROR] AI response was TRUNCATED!")
+                print(f"  [ERROR] Last schedule item: {json.dumps(last_item, ensure_ascii=False)[:300]}")
+                print(f"  [ERROR]")
+                print(f"  [ERROR] Possible causes:")
+                print(f"  [ERROR] 1. max_tokens setting is too low (current: {max_tokens})")
+                print(f"  [ERROR] 2. AI model has output size limit")
+                print(f"  [ERROR] 3. Input data is too large")
+                print(f"  [ERROR]")
+                print(f"  [ERROR] Solutions:")
+                print(f"  [ERROR] - Increase max_tokens in config.ini (try 200000 or higher)")
+                print(f"  [ERROR] - Check your AI model's maximum output size")
+                print(f"  [ERROR] - Reduce input data size")
+                print(f"  [ERROR] - Check raw response in ai_responses/ai_response_raw_*.txt")
+
+                # 不抛出错误，让程序继续运行
+                print(f"  [WARNING] Continuing with truncated data...")
+
+    # 保存 AI 响应（包含原始响应）
+    if save_response:
+        try:
+            save_ai_response(data, raw_response=response)
+        except Exception as e:
+            print(f"  [WARNING] Failed to save AI response: {e}")
 
     # 验证schema
     if not validate_json_schema(data):
@@ -1077,13 +1136,6 @@ def process_with_ai(api_key, base_url, model, rules_text, ai_data_text, thursday
                 print(f"  [OK] Distribution completed: now {len(distributed_orders)} cells")
 
         print(f"  [OK] Work order distribution completed")
-
-    # 保存 AI 响应（如果启用）
-    if save_response:
-        try:
-            save_ai_response(data)
-        except Exception as e:
-            print(f"  [WARNING] Failed to save AI response: {e}")
 
     return data
 
