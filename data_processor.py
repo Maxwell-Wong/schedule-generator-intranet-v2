@@ -20,12 +20,10 @@ def get_base_dir():
         if os.path.exists(os.path.join(cwd, 'config.ini')):
             return cwd
 
-        # 如果当前目录没有 config.ini，尝试 _MEIPASS 临时目录
-        meipass = getattr(sys, '_MEIPASS', None)
-        if meipass and os.path.exists(meipass):
-            return meipass
-        # 如果 _MEIPASS 不存在，返回可执行文件所在目录
-        return os.path.dirname(os.path.abspath(sys.executable))
+        # 如果当前目录没有 config.ini，返回可执行文件所在目录
+        # 这样用户可以把 config.ini 放在程序旁边
+        exe_dir = os.path.dirname(os.path.abspath(sys.executable))
+        return exe_dir
     else:
         # 开发环境
         return os.path.dirname(os.path.abspath(__file__))
