@@ -147,14 +147,24 @@ jobs:
         if ($output -match "Configuration loaded") {
           Write-Host "[OK] Executable successfully loaded configuration"
           Write-Host "[OK] Validation PASSED - executable can read config.ini"
+          $testPassed = $true
         } else {
           Write-Host "[ERROR] Failed to load configuration"
-          exit 1
+          $testPassed = $false
         }
 
         # 清理测试环境
         cd ..
-        Remove-Item -Recurse -Force test_environment
+        Remove-Item -Recurse -Force test_environment -ErrorAction SilentlyContinue
+
+        # 根据测试结果返回退出码
+        if ($testPassed) {
+          Write-Host "[SUCCESS] All tests passed"
+          exit 0
+        } else {
+          Write-Host "[FAILURE] Tests failed"
+          exit 1
+        }
 
     - name: Create deployment package
       run: |
