@@ -24,7 +24,7 @@ def main():
     try:
         config = data_processor.load_config()
     except Exception as e:
-        print(f"\n✗ Configuration file loading failed: {e}")
+        print(f"\n[ERROR] Configuration file loading failed: {e}")
         print("Please ensure config.ini file exists and is correctly formatted")
         return 1
 
@@ -35,13 +35,13 @@ def main():
 
     # 检查输入文件是否存在
     if not os.path.exists(config['input_file']):
-        print(f"\n✗ Input file not found: {config['input_file']}")
+        print(f"\n[ERROR] Input file not found: {config['input_file']}")
         return 1
 
     # 读取转换规则
     rules_file = os.path.join(config['base_dir'], 'prompts', 'transform_rules.md')
     if not os.path.exists(rules_file):
-        print(f"\n✗ Rules file not found: {rules_file}")
+        print(f"\n[ERROR] Rules file not found: {rules_file}")
         return 1
 
     with open(rules_file, 'r', encoding='utf-8') as f:
@@ -53,7 +53,7 @@ def main():
     try:
         df_filtered, ai_data_text = data_processor.load_and_process_excel(config['input_file'])
     except Exception as e:
-        print(f"\n✗ Failed to load Excel file: {e}")
+        print(f"\n[ERROR] Failed to load Excel file: {e}")
         return 1
 
     # 调用AI处理数据
@@ -68,19 +68,19 @@ def main():
             config.get('max_tokens', 40000)
         )
     except Exception as e:
-        print(f"\n✗ AI processing failed: {e}")
+        print(f"\n[ERROR] AI processing failed: {e}")
         return 1
 
     # 生成Excel文件
     try:
         excel_generator.generate_excel(json_data, config['output_file'], df_filtered)
     except Exception as e:
-        print(f"\n✗ Excel generation failed: {e}")
+        print(f"\n[ERROR] Excel generation failed: {e}")
         import traceback
         traceback.print_exc()
         return 1
 
-    print(f"\n✅ All tasks completed successfully!")
+    print(f"\n[SUCCESS] All tasks completed successfully!")
     return 0
 
 
@@ -90,10 +90,10 @@ if __name__ == "__main__":
         # input("\nPress Enter to exit...")  # Commented out for non-interactive use
         sys.exit(exit_code)
     except KeyboardInterrupt:
-        print("\n\n✗ Interrupted by user")
+        print("\n\n[INTERRUPTED] Operation cancelled by user")
         sys.exit(1)
     except Exception as e:
-        print(f"\n✗ Unexpected error: {e}")
+        print(f"\n[ERROR] Unexpected error: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

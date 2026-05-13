@@ -12,10 +12,24 @@ import os
 
 
 def get_base_dir():
-    """获取程序运行的基础目录"""
+    """获取程序运行的基础目录，兼容 PyInstaller 打包后的环境"""
     if getattr(sys, 'frozen', False):
+        # PyInstaller 打包后的环境
+        # 尝试多个可能的位置
+        possible_paths = [
+            # 可执行文件所在目录（通常情况）
+            os.path.dirname(os.path.abspath(sys.executable)),
+            # _MEIPASS 临时目录（PyInstaller 解压资源的位置）
+            getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(sys.executable))),
+        ]
+        # 返回第一个存在的路径
+        for path in possible_paths:
+            if os.path.exists(path):
+                return path
+        # 如果都不存在，返回可执行文件目录
         return os.path.dirname(os.path.abspath(sys.executable))
     else:
+        # 开发环境
         return os.path.dirname(os.path.abspath(__file__))
 
 
@@ -77,12 +91,12 @@ def process_source_data(source_file, config=None):
         xls = pd.ExcelFile(source_file)
         if '变更明细数据报表' in xls.sheet_names:
             df = pd.read_excel(source_file, sheet_name='变更明细数据报表')
-            print(f"  ✓ Reading sheet: 变更明细数据报表")
+            print(f"  [OK] Reading sheet: 变更明细数据报表")
         else:
             df = pd.read_excel(source_file)
-            print(f"  ✓ Reading first sheet: {xls.sheet_names[0]}")
+            print(f"  [OK] Reading first sheet: {xls.sheet_names[0]}")
     except Exception as e:
-        print(f"✗ Failed to read Excel file: {e}")
+        print(f"[ERROR] Failed to read Excel file: {e}")
         raise
 
     print(f"  Original shape: {df.shape}")
@@ -95,7 +109,7 @@ def process_source_data(source_file, config=None):
     if config.get('remove_serial_column', True):
         if '序号' in df.columns:
             df = df.drop(columns=['序号'])
-            print(f"  ✓ Removed '序号' column (per config)")
+            print(f"  [OK] Removed '序号' column (per config)")
 
     # 过滤工单状态（从配置读取）
     removed_status = config.get('removed_status', '已撤銷')
@@ -103,7 +117,7 @@ def process_source_data(source_file, config=None):
         initial_rows = len(df)
         df = df[df['工单状态'] != removed_status]
         removed_rows = initial_rows - len(df)
-        print(f"  ✓ Removed {removed_rows} rows with '工单状态' = '{removed_status}' (per config)")
+        print(f"  [OK] Removed {removed_rows} rows with '工单状态' = '{removed_status}' (per config)")
 
     # 过滤提单所属团队（从配置读取）
     removed_teams = config.get('removed_teams', [])
@@ -111,7 +125,7 @@ def process_source_data(source_file, config=None):
         initial_rows = len(df)
         df = df[~df['提單人所屬團隊'].isin(removed_teams)]
         removed_rows = initial_rows - len(df)
-        print(f"  ✓ Removed {removed_rows} rows with '提單人所屬團隊' in {removed_teams} (per config)")
+        print(f"  [OK] Removed {removed_rows} rows with '提單人所屬團隊' in {removed_teams} (per config)")
 
     print(f"  Final shape: {df.shape}")
     print(f"  Columns: {df.columns.tolist()}")

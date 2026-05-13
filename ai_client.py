@@ -88,7 +88,7 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768):
     # 检查提示词长度，避免超过模型限制
     estimated_tokens = len(prompt) // 4  # 粗略估算：1 token ≈ 4 字符
     if estimated_tokens > 100000:
-        print(f"  ⚠ Warning: Prompt is very long ({estimated_tokens} tokens)")
+        print(f"  [WARNING] Warning: Prompt is very long ({estimated_tokens} tokens)")
         print(f"  This might exceed model context limits")
         response = input(f"  Continue anyway? (y/n): ")
         if response.lower() != 'y':
@@ -148,8 +148,8 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768):
                     break
 
             if not has_json and len(content_candidates) > 0:
-                print(f"  ⚠ WARNING: No JSON found in any content field!")
-                print(f"  ⚠ The model appears to be stuck in a reasoning loop.")
+                print(f"  [WARNING] WARNING: No JSON found in any content field!")
+                print(f"  [WARNING] The model appears to be stuck in a reasoning loop.")
 
                 # 检查是否有重复模式
                 if 'reasoning_content' in [attr for attr, _ in content_candidates]:
@@ -159,7 +159,7 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768):
                     lines = reasoning.split('\n')
                     unique_lines = set(lines)
                     if len(lines) > 100 and len(unique_lines) < len(lines) * 0.3:
-                        print(f"  ⚠ Detected repetitive content (possible loop)")
+                        print(f"  [WARNING] Detected repetitive content (possible loop)")
                         print(f"     - Total lines: {len(lines)}")
                         print(f"     - Unique lines: {len(unique_lines)}")
                         print(f"     - Repetition rate: {100 * (1 - len(unique_lines)/len(lines)):.1f}%")
@@ -172,48 +172,48 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768):
             # 如果 reasoning_content 存在且看起来像推理过程（不包含 JSON）
             # 则尝试使用 content（即使它看起来为空，可能是空字符串而不是 None）
             if len(content_candidates) == 0:
-                print(f"  ⚠ All content fields are empty or None")
+                print(f"  [WARNING] All content fields are empty or None")
                 # 尝试获取空字符串
                 if hasattr(message, 'content'):
                     content = message.content or ""
-                    print(f"  ✓ Using empty content field")
+                    print(f"  [OK] Using empty content field")
                 else:
                     raise ValueError("API returned empty response")
 
             elif len(content_candidates) == 1:
                 # 只有一个字段有内容
                 attr, content = content_candidates[0]
-                print(f"  ✓ Using {attr} ({len(content)} chars)")
+                print(f"  [OK] Using {attr} ({len(content)} chars)")
 
             else:
                 # 多个字段都有内容，需要判断哪个是最终结果
                 # reasoning_content 通常是推理过程，content 是最终结果
                 if hasattr(message, 'content') and message.content:
                     content = message.content
-                    print(f"  ✓ Using content field (final result)")
+                    print(f"  [OK] Using content field (final result)")
                 elif hasattr(message, 'text') and message.text:
                     content = message.text
-                    print(f"  ✓ Using text field")
+                    print(f"  [OK] Using text field")
                 else:
                     # 使用第一个非空的
                     attr, content = content_candidates[0]
-                    print(f"  ⚠ Multiple fields found, using {attr}")
+                    print(f"  [WARNING] Multiple fields found, using {attr}")
 
             # 检查内容是否以 JSON 标记开头
             if content and not content.strip().startswith(('{', '```', '[')):
-                print(f"  ⚠ Warning: Content doesn't look like JSON")
+                print(f"  [WARNING] Warning: Content doesn't look like JSON")
                 print(f"  Content preview: {content[:200]}")
 
                 # 如果 reasoning_content 看起来像推理过程
                 if '让我分析' in content or '首先' in content or '接下来' in content:
-                    print(f"  ⚠ This appears to be reasoning process, not final JSON")
+                    print(f"  [WARNING] This appears to be reasoning process, not final JSON")
                     print(f"  💡 Suggestion: The model may be in 'thinking mode'")
                     print(f"  💡 Try: Add stronger instructions to output JSON directly")
 
             if not content or len(content.strip()) == 0:
                 raise ValueError("API returned empty content")
 
-            print(f"  ✓ API call successful")
+            print(f"  [OK] API call successful")
             print(f"  Response length: {len(content)} characters")
             return content.strip()
         else:
@@ -223,7 +223,7 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768):
         error_type = type(e).__name__
         error_msg = str(e)
 
-        print(f"  ✗ API call failed: {error_type}: {error_msg}")
+        print(f"  [ERROR] API call failed: {error_type}: {error_msg}")
 
         # 针对不同错误类型给出建议
         if 'timeout' in error_msg.lower() or 'Timeout' in error_type:
@@ -255,8 +255,8 @@ def parse_ai_response(response_text):
 
     # 检测JSON是否被截断
     if response_text.count('{') > response_text.count('}'):
-        print(f"  ⚠ Warning: JSON appears to be truncated (more {{ than }})")
-        print(f"  ⚠ Attempting to fix truncated JSON...")
+        print(f"  [WARNING] Warning: JSON appears to be truncated (more {{ than }})")
+        print(f"  [WARNING] Attempting to fix truncated JSON...")
 
         # 尝试补全JSON
         try:
@@ -300,17 +300,17 @@ def parse_ai_response(response_text):
                         else:
                             truncated_json = truncated_json.rstrip() + ']}'
 
-                print(f"  ✓ Attempting to parse fixed JSON...")
+                print(f"  [OK] Attempting to parse fixed JSON...")
                 data = json.loads(truncated_json)
-                print(f"  ✓ Parsed truncated JSON successfully")
-                print(f"  ⚠ Note: Some data may be missing due to truncation")
+                print(f"  [OK] Parsed truncated JSON successfully")
+                print(f"  [WARNING] Note: Some data may be missing due to truncation")
                 return data
         except Exception as e:
-            print(f"  ✗ Failed to fix truncated JSON: {e}")
+            print(f"  [ERROR] Failed to fix truncated JSON: {e}")
 
     # 如果响应文本包含推理过程，尝试从中提取 JSON
     if response_text and ('让我分析' in response_text or '首先' in response_text or '接下来' in response_text):
-        print(f"  ⚠ Response contains reasoning text, attempting to extract JSON...")
+        print(f"  [WARNING] Response contains reasoning text, attempting to extract JSON...")
 
         # 尝试找到 JSON 开始的位置（查找 { 或 ```json）
         json_start = -1
@@ -321,13 +321,13 @@ def parse_ai_response(response_text):
             json_end = response_text.find('```', json_start + 7)
             if json_end > json_start:
                 json_str = response_text[json_start + 7:json_end].strip()
-                print(f"  ✓ Found JSON code block")
+                print(f"  [OK] Found JSON code block")
                 try:
                     data = json.loads(json_str)
-                    print(f"  ✓ JSON parsed successfully")
+                    print(f"  [OK] JSON parsed successfully")
                     return data
                 except json.JSONDecodeError as e:
-                    print(f"  ✗ Failed to parse JSON from code block: {e}")
+                    print(f"  [ERROR] Failed to parse JSON from code block: {e}")
 
         # 方法2: 查找第一个 { 和最后一个 }
         if '{' in response_text and '}' in response_text:
@@ -336,14 +336,14 @@ def parse_ai_response(response_text):
 
             # 尝试从这个范围提取 JSON
             json_str = response_text[first_brace:last_brace + 1]
-            print(f"  ✓ Extracting JSON from position {first_brace} to {last_brace}")
+            print(f"  [OK] Extracting JSON from position {first_brace} to {last_brace}")
 
             try:
                 data = json.loads(json_str)
-                print(f"  ✓ JSON parsed successfully")
+                print(f"  [OK] JSON parsed successfully")
                 return data
             except json.JSONDecodeError as e:
-                print(f"  ✗ Failed to parse extracted JSON: {e}")
+                print(f"  [ERROR] Failed to parse extracted JSON: {e}")
                 print(f"  Trying to fix common JSON issues...")
 
                 # 尝试修复：移除注释和多余的逗号
@@ -355,13 +355,13 @@ def parse_ai_response(response_text):
 
                 try:
                     data = json.loads(json_str)
-                    print(f"  ✓ JSON parsed successfully after cleanup")
+                    print(f"  [OK] JSON parsed successfully after cleanup")
                     return data
                 except:
                     pass
 
         # 如果都失败了，抛出错误
-        print(f"  ✗ Could not extract valid JSON from reasoning text")
+        print(f"  [ERROR] Could not extract valid JSON from reasoning text")
         print(f"  Response preview (first 500 chars):")
         print(f"  {response_text[:500]}")
         raise ValueError("Could not extract valid JSON from AI reasoning response")
@@ -369,7 +369,7 @@ def parse_ai_response(response_text):
     # 尝试直接解析
     try:
         data = json.loads(response_text)
-        print(f"  ✓ JSON parsed successfully")
+        print(f"  [OK] JSON parsed successfully")
         return data
     except json.JSONDecodeError:
         pass
@@ -383,10 +383,10 @@ def parse_ai_response(response_text):
             json_str = response_text[start:end].strip()
             try:
                 data = json.loads(json_str)
-                print(f"  ✓ JSON parsed from markdown code block")
+                print(f"  [OK] JSON parsed from markdown code block")
                 return data
             except json.JSONDecodeError as e:
-                print(f"  ✗ Failed to parse JSON: {e}")
+                print(f"  [ERROR] Failed to parse JSON: {e}")
                 raise
     elif "```" in response_text:
         # 提取第一个 ``` 和 ``` 之间的内容
@@ -400,13 +400,13 @@ def parse_ai_response(response_text):
                 json_str = '\n'.join(lines[1:])
             try:
                 data = json.loads(json_str)
-                print(f"  ✓ JSON parsed from code block")
+                print(f"  [OK] JSON parsed from code block")
                 return data
             except json.JSONDecodeError as e:
-                print(f"  ✗ Failed to parse JSON: {e}")
+                print(f"  [ERROR] Failed to parse JSON: {e}")
                 raise
 
-    print(f"  ✗ No valid JSON found in response")
+    print(f"  [ERROR] No valid JSON found in response")
     print(f"  Response preview (first 200 chars):")
     print(f"  {response_text[:200]}")
     raise ValueError("Could not extract valid JSON from AI response")
@@ -426,51 +426,164 @@ def validate_json_schema(data):
 
     # 基本结构验证
     if not isinstance(data, dict):
-        print(f"  ✗ Root is not an object")
+        print(f"  [ERROR] Root is not an object")
         return False
 
     if 'schedule' not in data:
-        print(f"  ✗ Missing 'schedule' field")
+        print(f"  [ERROR] Missing 'schedule' field")
         return False
 
     if not isinstance(data['schedule'], list):
-        print(f"  ✗ 'schedule' is not an array")
+        print(f"  [ERROR] 'schedule' is not an array")
         return False
 
     if 'filtered_source_data' not in data:
-        print(f"  ✗ Missing 'filtered_source_data' field")
+        print(f"  [ERROR] Missing 'filtered_source_data' field")
         return False
 
     # 验证schedule数组
     for i, day in enumerate(data['schedule']):
         if not isinstance(day, dict):
-            print(f"  ✗ Schedule item {i} is not an object")
+            print(f"  [ERROR] Schedule item {i} is not an object")
             return False
 
         # 只检查必需的核心字段
         required_fields = ['date', 'type', 'work_orders']
         for field in required_fields:
             if field not in day:
-                print(f"  ✗ Schedule item {i} missing field '{field}'")
+                print(f"  [ERROR] Schedule item {i} missing field '{field}'")
                 return False
 
         if day['type'] not in ['normal', 'special']:
-            print(f"  ✗ Schedule item {i} has invalid type '{day['type']}'")
+            print(f"  [ERROR] Schedule item {i} has invalid type '{day['type']}'")
             return False
 
         if day['type'] == 'normal' and 'time_range' not in day:
-            print(f"  ✗ Normal schedule item {i} missing 'time_range'")
+            print(f"  [ERROR] Normal schedule item {i} missing 'time_range'")
             return False
 
         if day['type'] == 'special' and 'time_points' not in day:
-            print(f"  ✗ Special schedule item {i} missing 'time_points'")
+            print(f"  [ERROR] Special schedule item {i} missing 'time_points'")
             return False
 
-    print(f"  ✓ JSON schema validation passed")
+    print(f"  [OK] JSON schema validation passed")
     print(f"  - Schedule items: {len(data['schedule'])}")
     print(f"  - Source data rows: {len(data['filtered_source_data'])}")
 
     return True
+
+
+def distribute_workorders_evenly_with_grouping(items, target_count):
+    """
+    将工单均匀分配到指定数量的单元格中
+
+    Args:
+        items: 工单信息列表，每个元素包含 {'content': 工单文本, 'person': 人员姓名}
+        target_count: 目标单元格数量（来自配置的 thursday_person_count）
+
+    Returns:
+        list: 分配后的工单列表
+    """
+    if not items or target_count <= 0:
+        return items
+
+    # 提取所有不重复的人员
+    persons = {}
+    for item in items:
+        person = item.get('person', '')
+        if person not in persons:
+            persons[person] = []
+        persons[person].append(item)
+
+    unique_persons = list(persons.keys())
+    num_persons = len(unique_persons)
+
+    # 情况1：如果 target_count >= 人员数 → 直接均匀分配（不合并同一人的工单）
+    if target_count >= num_persons:
+        # 计算每组多少人
+        base_size = num_persons // target_count
+        extra = num_persons % target_count
+
+        distributed = []
+        person_idx = 0
+
+        for i in range(target_count):
+            # 这一组的工单
+            group_size = base_size + (1 if i < extra else 0)
+            group_work_orders = []
+
+            for j in range(group_size):
+                if person_idx < num_persons:
+                    person = unique_persons[person_idx]
+                    # 添加这个人的所有工单
+                    group_work_orders.extend(persons[person])
+                    person_idx += 1
+
+            # 如果有多个人，合并他们的工单到一个单元格
+            if group_work_orders:
+                if len(group_work_orders) == 1:
+                    distributed.append(group_work_orders[0])
+                else:
+                    # 合并多个人的工单
+                    merged_content = '\n'.join([wo.get('content', '') for wo in group_work_orders])
+                    # 使用第一个人的名字作为代表（或者可以合并名字）
+                    merged_person = group_work_orders[0].get('person', '')
+                    distributed.append({
+                        'person': merged_person,
+                        'content': merged_content
+                    })
+
+        return distributed
+
+    # 情况2：如果 target_count < 人员数 → 同一人的工单合并，其他人均匀分配
+    else:
+        # 先合并同一人的工单
+        merged_persons = {}
+        for person, work_orders in persons.items():
+            if len(work_orders) == 1:
+                merged_persons[person] = work_orders[0]
+            else:
+                # 合并同一人的多个工单
+                merged_content = '\n'.join([wo.get('content', '') for wo in work_orders])
+                merged_persons[person] = {
+                    'person': person,
+                    'content': merged_content
+                }
+
+        # 现在有 num_persons 个合并后的工单，需要分配到 target_count 个单元格
+        merged_items = list(merged_persons.values())
+
+        # 计算每组多少人
+        base_size = num_persons // target_count
+        extra = num_persons % target_count
+
+        distributed = []
+        person_idx = 0
+
+        for i in range(target_count):
+            # 这一组的工单数
+            group_size = base_size + (1 if i < extra else 0)
+            group_work_orders = []
+
+            for j in range(group_size):
+                if person_idx < len(merged_items):
+                    group_work_orders.append(merged_items[person_idx])
+                    person_idx += 1
+
+            # 如果有多个人的工单，合并到一个单元格
+            if group_work_orders:
+                if len(group_work_orders) == 1:
+                    distributed.append(group_work_orders[0])
+                else:
+                    # 合并多个人的工单
+                    merged_content = '\n'.join([wo.get('content', '') for wo in group_work_orders])
+                    merged_person = group_work_orders[0].get('person', '')
+                    distributed.append({
+                        'person': merged_person,
+                        'content': merged_content
+                    })
+
+        return distributed
 
 
 def post_process_json_data(data):
@@ -541,7 +654,7 @@ def post_process_json_data(data):
     unique_schedule.sort(key=lambda x: parse_chinese_date(x['date']))
     data['schedule'] = unique_schedule
 
-    print(f"  ✓ Deduplicated and sorted dates: {len(unique_schedule)} unique dates")
+    print(f"  [OK] Deduplicated and sorted dates: {len(unique_schedule)} unique dates")
 
     # 2.5 工单去重（每个日期内，按完整内容去重，而不是只按工单号）
     # 因为可能有不同的任务在同一个日期，所以只有完全相同的content才去重
@@ -550,7 +663,7 @@ def post_process_json_data(data):
 
         # 检查work_orders是否是列表
         if not isinstance(work_orders, list):
-            print(f"  ⚠ Warning: work_orders is not a list for date {schedule_item.get('date')}")
+            print(f"  [WARNING] Warning: work_orders is not a list for date {schedule_item.get('date')}")
             continue
 
         seen_contents = {}
@@ -559,7 +672,7 @@ def post_process_json_data(data):
         for work_order in work_orders:
             # 检查work_order是否是字典
             if not isinstance(work_order, dict):
-                print(f"  ⚠ Warning: work_order is not a dict in deduplication, type: {type(work_order)}")
+                print(f"  [WARNING] Warning: work_order is not a dict in deduplication, type: {type(work_order)}")
                 continue
 
             content = work_order.get('content', '')
@@ -576,9 +689,9 @@ def post_process_json_data(data):
         final_count = len(unique_work_orders)
 
         if original_count != final_count:
-            print(f"  ⚠ Date {schedule_item['date']}: removed {original_count - final_count} duplicate work orders")
+            print(f"  [WARNING] Date {schedule_item['date']}: removed {original_count - final_count} duplicate work orders")
 
-    print(f"  ✓ Deduplicated work orders within each date")
+    print(f"  [OK] Deduplicated work orders within each date")
 
     # 3. 修复work_order内容格式（只修复缩写，不重新分配工单）
     if 'filtered_source_data' in data and len(data['filtered_source_data']) > 0:
@@ -612,13 +725,13 @@ def post_process_json_data(data):
 
             # 检查work_orders是否是列表
             if not isinstance(work_orders, list):
-                print(f"  ⚠ Warning: work_orders is not a list for date {schedule_item.get('date')}, type: {type(work_orders)}")
+                print(f"  [WARNING] Warning: work_orders is not a list for date {schedule_item.get('date')}, type: {type(work_orders)}")
                 continue
 
             for work_order in work_orders:
                 # 检查work_order是否是字典
                 if not isinstance(work_order, dict):
-                    print(f"  ⚠ Warning: work_order is not a dict, type: {type(work_order)}, value: {work_order}")
+                    print(f"  [WARNING] Warning: work_order is not a dict, type: {type(work_order)}, value: {work_order}")
                     continue
 
                 content = work_order.get('content', '')
@@ -659,7 +772,7 @@ def post_process_json_data(data):
                             work_order['content'] = new_content
                             work_order['person'] = chinese_name
 
-        print(f"  ✓ Fixed English abbreviations in work orders")
+        print(f"  [OK] Fixed English abbreviations in work orders")
 
     # 4. 对于special类型，确保time_points去重和排序
     for schedule_item in data['schedule']:
@@ -690,15 +803,15 @@ def post_process_json_data(data):
     if 'filtered_source_data' in data and len(data['filtered_source_data']) > 0:
         # 检查第一行的列数
         first_row_cols = set(data['filtered_source_data'][0].keys())
-        print(f"  ✓ filtered_source_data has {len(first_row_cols)} columns")
+        print(f"  [OK] filtered_source_data has {len(first_row_cols)} columns")
 
         # 确保所有行都有相同的列
         for i, row in enumerate(data['filtered_source_data']):
             row_cols = set(row.keys())
             if row_cols != first_row_cols:
-                print(f"  ⚠ Warning: Row {i} has different columns")
+                print(f"  [WARNING] Warning: Row {i} has different columns")
 
-    print(f"  ✓ Post-processing completed")
+    print(f"  [OK] Post-processing completed")
 
     return data
 
@@ -777,7 +890,7 @@ def validate_and_fix_data_completeness(data, ai_data_text):
             except:
                 pass
 
-    print(f"  ✓ Found {len(work_orders_input)} work orders in input")
+    print(f"  [OK] Found {len(work_orders_input)} work orders in input")
 
     # 检查schedule中遗漏的工单
     schedule_by_date = {}
@@ -805,7 +918,7 @@ def validate_and_fix_data_completeness(data, ai_data_text):
 
             if wo_num not in existing:
                 # 这个工单被遗漏了，需要添加
-                print(f"  ⚠ Adding missing work order: {wo_num} ({wo.get('提單人', 'N/A')}) to {date}")
+                print(f"  [WARNING] Adding missing work order: {wo_num} ({wo.get('提單人', 'N/A')}) to {date}")
 
                 # 提取系统缩写
                 system_name = wo.get('變更系統名稱匯總', '')
@@ -839,9 +952,9 @@ def validate_and_fix_data_completeness(data, ai_data_text):
                 added_count += 1
 
     if added_count > 0:
-        print(f"  ✓ Added {added_count} missing work orders to schedule")
+        print(f"  [OK] Added {added_count} missing work orders to schedule")
     else:
-        print(f"  ✓ All work orders are present in schedule")
+        print(f"  [OK] All work orders are present in schedule")
 
     return data
 
@@ -880,6 +993,58 @@ def process_with_ai(api_key, base_url, model, rules_text, ai_data_text, thursday
 
     # 验证数据完整性
     data = validate_and_fix_data_completeness(data, ai_data_text)
+
+    # 应用工单分配逻辑（后处理验证和优化）
+    if thursday_count is not None:
+        print(f"\n[4.7/5] Applying work order distribution (post-processing validation)...")
+
+        import re
+        from datetime import datetime
+
+        for schedule_item in data['schedule']:
+            work_orders = schedule_item.get('work_orders', [])
+
+            if not isinstance(work_orders, list) or len(work_orders) == 0:
+                continue
+
+            # 判断是否需要应用分配逻辑
+            needs_distribution = False
+            target_count = None
+
+            # 提取日期判断是周几
+            date_str = schedule_item['date']
+            date_match = re.match(r'(\d+)月(\d+)日', date_str)
+
+            if date_match:
+                try:
+                    month = int(date_match.group(1))
+                    day = int(date_match.group(2))
+                    # 使用2026年（根据示例数据）
+                    date_obj = datetime(2026, month, day)
+                    weekday = date_obj.weekday()  # 0=周一, 3=周四, 5=周六, 6=周日
+
+                    # 周四（weekday=3）且工单数 > thursday_count
+                    if weekday == 3 and len(work_orders) > thursday_count:
+                        needs_distribution = True
+                        target_count = thursday_count
+
+                except Exception as e:
+                    print(f"  [WARNING] Warning: Could not parse date {date_str}: {e}")
+
+            # 应用分配逻辑
+            if needs_distribution and target_count:
+                print(f"  [WARNING] Applying distribution for {schedule_item['date']}: {len(work_orders)} work orders → {target_count} cells")
+
+                # 重新分配工单
+                distributed_orders = distribute_workorders_evenly_with_grouping(
+                    work_orders,
+                    target_count
+                )
+
+                schedule_item['work_orders'] = distributed_orders
+                print(f"  [OK] Distribution completed: now {len(distributed_orders)} cells")
+
+        print(f"  [OK] Work order distribution completed")
 
     return data
 

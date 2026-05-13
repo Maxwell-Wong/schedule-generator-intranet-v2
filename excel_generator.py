@@ -47,7 +47,7 @@ def validate_and_fix_content_format(content):
         else:
             # Log format issue for debugging
             if not format_issues_found:
-                print(f"  ⚠ Warning: Found work order content not matching expected format:")
+                print(f"  [WARNING] Warning: Found work order content not matching expected format:")
                 print(f"     Expected: '(中台) XXXX AAA 名字'")
                 print(f"     Got: '{line[:50]}...' " if len(line) > 50 else f"     Got: '{line}'")
                 format_issues_found = True
@@ -234,7 +234,7 @@ def create_schedule_sheet(ws, schedule_data):
     for row_idx in range(4, 200):
         ws.row_dimensions[row_idx].height = formatters.get_row_height()
 
-    print(f"  ✓ Schedule sheet created with {len(schedule_data['schedule'])} dates")
+    print(f"  [OK] Schedule sheet created with {len(schedule_data['schedule'])} dates")
 
 
 def create_data_sheet(ws, filtered_data):
@@ -255,7 +255,7 @@ def create_data_sheet(ws, filtered_data):
     apply_cell_format(ws['A1'], formatters.get_data_sheet_title_format())
 
     if not filtered_data:
-        print(f"  ⚠ No data to write")
+        print(f"  [WARNING] No data to write")
         return
 
     # 列头（第2行）
@@ -276,7 +276,7 @@ def create_data_sheet(ws, filtered_data):
         col_letter = get_column_letter(col_idx)
         ws.column_dimensions[col_letter].width = formatters.get_data_sheet_column_width()
 
-    print(f"  ✓ Data sheet created with {len(filtered_data)} rows")
+    print(f"  [OK] Data sheet created with {len(filtered_data)} rows")
 
 
 def generate_excel(json_data, output_file, df_filtered=None):
@@ -308,7 +308,7 @@ def generate_excel(json_data, output_file, df_filtered=None):
         # 将DataFrame转换为字典列表，保留所有列
         filtered_data = df_filtered.to_dict('records')
         create_data_sheet(ws_data, filtered_data)
-        print(f"  ✓ Data sheet created with {len(df_filtered.columns)} columns")
+        print(f"  [OK] Data sheet created with {len(df_filtered.columns)} columns")
     else:
         # 回退到AI返回的数据（可能不完整）
         create_data_sheet(ws_data, json_data['filtered_source_data'])
@@ -316,9 +316,9 @@ def generate_excel(json_data, output_file, df_filtered=None):
     # 保存文件
     wb.save(output_file)
 
-    print(f"  ✓ Excel file saved: {output_file}")
+    print(f"  [OK] Excel file saved: {output_file}")
     print(f"\n{'=' * 60}")
-    print(f"✅ Two-sheet Excel file generated successfully!")
+    print(f"[SUCCESS] Two-sheet Excel file generated successfully!")
     print(f"{'=' * 60}")
     print(f"\nOutput file: {output_file}")
     print(f"\nSheets created:")
