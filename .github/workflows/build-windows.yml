@@ -105,7 +105,7 @@ jobs:
         Write-Host "Testing executable..."
 
         # 创建临时 config.ini 用于测试
-        $testConfig = @"
+        @"
 [paths]
 input_file = data/sheet_input.xlsx
 output_file = output_transformed.xlsx
@@ -121,11 +121,10 @@ enable_ai_modify = true
 thursday_person_count = 6
 
 [filter]
-removed_status = 已撤銷
-removed_teams = 安全內控團隊,前端網路團隊,系統平臺團隊
+removed_status = Removed
+removed_teams = Team1,Team2,Team3
 remove_serial_column = true
-"@
-        $testConfig | Out-File -FilePath "dist\config.ini" -Encoding UTF8
+"@ | Out-File -FilePath "dist\config.ini" -Encoding UTF8
 
         Write-Host "[OK] Test config.ini created"
 
