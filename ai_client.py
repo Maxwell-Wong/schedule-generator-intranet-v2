@@ -101,11 +101,11 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768, max_retries=
 
             print(f"  Sending request to API (this may take 1-3 minutes)...")
             completion = client.chat.completions.create(
-            model=model,
-            messages=[
-                {
-                    "role": "system",
-                    "content": """你是一个专业的排班助手。
+                model=model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": """你是一个专业的排班助手。
 
 任务：根据输入数据生成 JSON 格式的排班表。
 
@@ -117,56 +117,158 @@ def call_ai_api(api_key, base_url, model, prompt, max_tokens=32768, max_retries=
 5. 确保 JSON 格式正确且完整
 
 开始输出："""
-                },
-                {"role": "user", "content": prompt}
-            ],
-            temperature=0.0,
-            top_p=0.1,
-            max_tokens=max_tokens,  # 使用配置的max_tokens值
-            stream=False,
-            presence_penalty=0.0,
-            frequency_penalty=0.0
-        )
+                    },
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.0,
+                top_p=0.1,
+                max_tokens=max_tokens,  # 使用配置的max_tokens值
+                stream=False,
+                presence_penalty=0.0,
+                frequency_penalty=0.0
+            )
 
-        # 获取响应内容
-        if hasattr(completion, 'choices') and len(completion.choices) > 0:
-            message = completion.choices[0].message
+            # 获取响应内容
+            if hasattr(completion, 'choices') and len(completion.choices) > 0:
+                message = completion.choices[0].message
 
-            # 打印所有可用字段用于调试
-            print(f"  🔍 Inspecting response fields...")
-            content_candidates = []
+                # 打印所有可用字段用于调试
+                print(f"  🔍 Inspecting response fields...")
+                content_candidates = []
 
-            # 检查所有可能的字段
-            for attr in ['content', 'reasoning_content', 'text', 'refusal']:
-                if hasattr(message, attr):
-                    val = getattr(message, attr)
-                    if val:  # 只记录非空值
-                        content_candidates.append((attr, val))
-                        print(f"    - {attr}: {len(val)} chars")
+                # 检查所有可能的字段
+                for attr in ['content', 'reasoning_content', 'text', 'refusal']:
+                    if hasattr(message, attr):
+                        val = getattr(message, attr)
+                        if val:  # 只记录非空值
+                            content_candidates.append((attr, val))
+                            print(f"    - {attr}: {len(val)} chars")
 
-            # 检测是否所有内容都是推理过程（没有 JSON）
-            has_json = False
-            for attr, val in content_candidates:
-                if '{' in val and '}' in val:
-                    has_json = True
-                    break
+                # 检测是否所有内容都是推理过程（没有 JSON）
+                has_json = False
+                for attr, val in content_candidates:
+                    if '{' in val and '}' in val:
+                        has_json = True
+                        break
 
-            if not has_json and len(content_candidates) > 0:
-                print(f"  [WARNING] WARNING: No JSON found in any content field!")
-                print(f"  [WARNING] The model appears to be stuck in a reasoning loop.")
+                if not has_json and len(content_candidates) > 0:
+                    print(f"  [WARNING] WARNING: No JSON found in any content field!")
+                    print(f"  [WARNING] The model appears to be stuck in a reasoning loop.")
 
-                # 检查是否有重复模式
-                if 'reasoning_content' in [attr for attr, _ in content_candidates]:
-                    reasoning = next(val for attr, val in content_candidates if attr == 'reasoning_content')
+                    # 检查是否有重复模式
+                    if 'reasoning_content' in [attr for attr, _ in content_candidates]:
+                        reasoning = next(val for attr, val in content_candidates if attr == 'reasoning_content')
 
-                    # 检测重复内容
-                    lines = reasoning.split('\n')
-                    unique_lines = set(lines)
-                    if len(lines) > 100 and len(unique_lines) < len(lines) * 0.3:
-                        print(f"  [WARNING] Detected repetitive content (possible loop)")
-                        print(f"     - Total lines: {len(lines)}")
-                        print(f"     - Unique lines: {len(unique_lines)}")
-                        print(f"     - Repetition rate: {100 * (1 - len(unique_lines)/len(lines)):.1f}%")
+                        # 检测重复内容
+                        lines = reasoning.split('\n')
+                        unique_lines = set(lines)
+                        if len(lines) > 100 and len(unique_lines) < len(lines) * 0.3:
+                            print(f"  [WARNING] Detected repetitive content (possible loop)")
+                            print(f"     - Total lines: {len(lines)}")
+                            print(f"     - Unique lines: {len(unique_lines)}")
+                            print(f"     - Repetition rate: {100 * (1 - len(unique_lines)/len(lines)):.1f}%")
+
+                    print(f"  💡 SUGGESTION:")
+                    print(f"     1. The minimax-m2.7 model may not be suitable for this task")
+                    print(f"     2. Try using a different model (e.g., 'meta/llama-3.1-70b-instruct')")
+                    print(f"     3. Simplify the prompt or reduce input data size")
+
+                # 如果 reasoning_content 存在且看起来像推理过程（不包含 JSON）
+                # 则尝试使用 content（即使它看起来为空，可能是空字符串而不是 None）
+                if len(content_candidates) == 0:
+                    print(f"  [WARNING] All content fields are empty or None")
+                    # 尝试获取空字符串
+                    if hasattr(message, 'content'):
+                        content = message.content or ""
+                        print(f"  [OK] Using empty content field")
+                    else:
+                        raise ValueError("API returned empty response")
+
+                elif len(content_candidates) == 1:
+                    # 只有一个字段有内容
+                    attr, content = content_candidates[0]
+                    print(f"  [OK] Using {attr} ({len(content)} chars)")
+
+                else:
+                    # 多个字段都有内容，需要判断哪个是最终结果
+                    # reasoning_content 通常是推理过程，content 是最终结果
+                    if hasattr(message, 'content') and message.content:
+                        content = message.content
+                        print(f"  [OK] Using content field (final result)")
+                    elif hasattr(message, 'text') and message.text:
+                        content = message.text
+                        print(f"  [OK] Using text field")
+                    else:
+                        # 使用第一个非空的
+                        attr, content = content_candidates[0]
+                        print(f"  [WARNING] Multiple fields found, using {attr}")
+
+                # 检查内容是否以 JSON 标记开头
+                if content and not content.strip().startswith(('{', '```', '[')):
+                    print(f"  [WARNING] Warning: Content doesn't look like JSON")
+                    print(f"  Content preview: {content[:200]}")
+
+                    # 如果 reasoning_content 看起来像推理过程
+                    if '让我分析' in content or '首先' in content or '接下来' in content:
+                        print(f"  [WARNING] This appears to be reasoning process, not final JSON")
+                        print(f"  💡 Suggestion: The model may be in 'thinking mode'")
+                        print(f"  💡 Try: Add stronger instructions to output JSON directly")
+
+                if not content or len(content.strip()) == 0:
+                    raise ValueError("API returned empty content")
+
+                print(f"  [OK] API call successful")
+                print(f"  Response length: {len(content)} characters")
+                return content.strip()
+            else:
+                raise ValueError("Invalid API response format")
+
+        except Exception as e:
+            error_type = type(e).__name__
+            error_msg = str(e)
+
+            # 检查是否应该重试
+            should_retry = False
+            retry_reason = ""
+
+            if '504' in error_msg or 'timeout' in error_msg.lower() or 'Timeout' in error_type:
+                should_retry = True
+                retry_reason = "Gateway timeout or request timeout"
+            elif '502' in error_msg or '503' in error_msg:
+                should_retry = True
+                retry_reason = "Server error or service unavailable"
+            elif 'rate limit' in error_msg.lower():
+                should_retry = True
+                retry_reason = "Rate limit exceeded"
+
+            # 如果应该重试且还有重试次数
+            if should_retry and attempt < max_retries - 1:
+                print(f"  [WARNING] API call failed: {error_type}: {error_msg}")
+                print(f"  [RETRY] {retry_reason} - Retrying in 5 seconds...")
+                import time
+                time.sleep(5)
+                continue
+            else:
+                # 不重试或重试次数用完，抛出异常
+                print(f"  [ERROR] API call failed: {error_type}: {error_msg}")
+
+                if should_retry and attempt >= max_retries - 1:
+                    print(f"  [ERROR] Max retries ({max_retries}) exceeded")
+
+                # 针对不同错误类型给出建议
+                if 'timeout' in error_msg.lower() or 'Timeout' in error_type or '504' in error_msg:
+                    print(f"  💡 Suggestion: The request timed out. Possible reasons:")
+                    print(f"     - Prompt is too long ({len(prompt)} characters)")
+                    print(f"     - API server is overloaded")
+                    print(f"     - Network connection is slow")
+                    print(f"  💡 Try: Reduce prompt size or increase timeout parameter")
+                elif 'rate limit' in error_msg.lower():
+                    print(f"  💡 Suggestion: Rate limit exceeded. Wait a moment and try again")
+                elif 'context' in error_msg.lower():
+                    print(f"  💡 Suggestion: Prompt exceeds model context window")
+                    print(f"  💡 Try: Reduce input data or use a model with larger context")
+
+                raise
 
                 print(f"  💡 SUGGESTION:")
                 print(f"     1. The minimax-m2.7 model may not be suitable for this task")
