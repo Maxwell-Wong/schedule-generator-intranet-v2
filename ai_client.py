@@ -9,6 +9,7 @@ AI客户端
 import json
 import os
 import pandas as pd
+from datetime import datetime
 from openai import OpenAI
 import data_processor
 
@@ -955,7 +956,42 @@ def validate_and_fix_data_completeness(data, ai_data_text):
     return data
 
 
-def process_with_ai(api_key, base_url, model, rules_text, ai_data_text, thursday_count, max_tokens=32768):
+def save_ai_response(data, base_dir=None):
+    """
+    保存 AI 返回的 JSON 数据到文件
+
+    Args:
+        data: AI 返回的 JSON 数据
+        base_dir: 基础目录（如果为 None，使用 get_base_dir()）
+    """
+    if base_dir is None:
+        base_dir = data_processor.get_base_dir()
+
+    # 创建输出目录
+    output_dir = os.path.join(base_dir, 'ai_responses')
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 生成文件名（使用时间戳）
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = f'ai_response_{timestamp}.json'
+    filepath = os.path.join(output_dir, filename)
+
+    # 保存 JSON 文件
+    with open(filepath, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+    print(f"\n[INFO] AI response saved to: {filepath}")
+
+    # 同时保存最新版本（方便访问）
+    latest_path = os.path.join(output_dir, 'ai_response_latest.json')
+    with open(latest_path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f"[INFO] Latest response saved to: {latest_path}")
+
+    return filepath
+
+
+def process_with_ai(api_key, base_url, model, rules_text, ai_data_text, thursday_count, max_tokens=32768, save_response=True):
     """
     使用AI处理数据
 
@@ -1041,6 +1077,13 @@ def process_with_ai(api_key, base_url, model, rules_text, ai_data_text, thursday
                 print(f"  [OK] Distribution completed: now {len(distributed_orders)} cells")
 
         print(f"  [OK] Work order distribution completed")
+
+    # 保存 AI 响应（如果启用）
+    if save_response:
+        try:
+            save_ai_response(data)
+        except Exception as e:
+            print(f"  [WARNING] Failed to save AI response: {e}")
 
     return data
 

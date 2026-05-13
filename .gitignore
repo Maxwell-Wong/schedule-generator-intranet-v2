@@ -33,3 +33,6 @@ deployment/
 # 临时文件
 文件清单.txt
 config.ini
+
+# AI 响应文件
+ai_responses/
