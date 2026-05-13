@@ -15,18 +15,11 @@ def get_base_dir():
     """获取程序运行的基础目录，兼容 PyInstaller 打包后的环境"""
     if getattr(sys, 'frozen', False):
         # PyInstaller 打包后的环境
-        # 尝试多个可能的位置
-        possible_paths = [
-            # 可执行文件所在目录（通常情况）
-            os.path.dirname(os.path.abspath(sys.executable)),
-            # _MEIPASS 临时目录（PyInstaller 解压资源的位置）
-            getattr(sys, '_MEIPASS', os.path.dirname(os.path.abspath(sys.executable))),
-        ]
-        # 返回第一个存在的路径
-        for path in possible_paths:
-            if os.path.exists(path):
-                return path
-        # 如果都不存在，返回可执行文件目录
+        # 优先返回 _MEIPASS 临时目录（PyInstaller 解压资源的位置）
+        meipass = getattr(sys, '_MEIPASS', None)
+        if meipass and os.path.exists(meipass):
+            return meipass
+        # 如果 _MEIPASS 不存在，返回可执行文件所在目录
         return os.path.dirname(os.path.abspath(sys.executable))
     else:
         # 开发环境
