@@ -60,7 +60,6 @@ jobs:
     - name: Build Windows executable
       run: |
         pyinstaller --onefile --clean `
-          --add-data "config.ini;." `
           --add-data "prompts;prompts" `
           --add-data "data;data" `
           --hidden-import openpyxl `
@@ -83,8 +82,9 @@ jobs:
       run: |
         mkdir deployment
         copy dist\ScheduleGenerator.exe deployment\
-        copy config.ini deployment\
+        copy config.ini.example deployment\
         copy README_CN.md deployment\
+        copy CONFIGURATION.md deployment\
         copy WINDOWS_README.md deployment\
         xcopy prompts deployment\prompts\ /E /I
         xcopy data deployment\data\ /E /I
@@ -147,7 +147,6 @@ jobs:
     - name: Build macOS executable
       run: |
         pyinstaller --onefile --clean \
-          --add-data "config.ini:." \
           --add-data "prompts:prompts" \
           --add-data "data:data" \
           --hidden-import openpyxl \
@@ -169,8 +168,9 @@ jobs:
       run: |
         mkdir deployment
         cp dist/ScheduleGenerator deployment/
-        cp config.ini deployment/
+        cp config.ini.example deployment/
         cp README_CN.md deployment/
+        cp CONFIGURATION.md deployment/
         cp -r prompts deployment/
         cp -r data deployment/
 
@@ -230,7 +230,6 @@ jobs:
     - name: Build Linux executable
       run: |
         pyinstaller --onefile --clean \
-          --add-data "config.ini:." \
           --add-data "prompts:prompts" \
           --add-data "data:data" \
           --hidden-import openpyxl \
@@ -252,8 +251,9 @@ jobs:
       run: |
         mkdir deployment
         cp dist/ScheduleGenerator deployment/
-        cp config.ini deployment/
+        cp config.ini.example deployment/
         cp README_CN.md deployment/
+        cp CONFIGURATION.md deployment/
         cp -r prompts deployment/
         cp -r data deployment/
 

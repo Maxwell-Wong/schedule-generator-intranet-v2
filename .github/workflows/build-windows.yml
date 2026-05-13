@@ -68,7 +68,6 @@ jobs:
     - name: Build executable with PyInstaller
       run: |
         pyinstaller --onefile --clean `
-          --add-data "config.ini;." `
           --add-data "prompts;prompts" `
           --add-data "data;data" `
           --hidden-import openpyxl `
@@ -116,9 +115,10 @@ jobs:
       run: |
         mkdir deployment
         copy dist\ScheduleGenerator.exe deployment\
-        copy config.ini deployment\
+        copy config.ini.example deployment\
         copy README_CN.md deployment\
         copy WINDOWS_README.md deployment\
+        copy CONFIGURATION.md deployment\
         xcopy prompts deployment\prompts\ /E /I
         xcopy data deployment\data\ /E /I
 

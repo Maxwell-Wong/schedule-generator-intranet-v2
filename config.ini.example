@@ -15,11 +15,27 @@ transform_file = transform_sheet.py
 modified_file = transform_sheet_modified.py
 
 [api]
-# Nvidia API 配置
-api_key = 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
-base_url = https://integrate.api.nvidia.com/v1
-# 使用 8b 模型以提高速度
-model = meta/llama-3.1-8b-instruct
+# API 配置 - 请根据你的环境修改
+# 示例1: 内网 Qwen 模型
+# api_key = your_internal_api_key
+# base_url = http://your-internal-server:8000/v1
+# model = Qwen/Qwen3.5-27B
+
+# 示例2: Nvidia API
+# api_key = nvapi-xxxxxxxxxxxx
+# base_url = https://integrate.api.nvidia.com/v1
+# model = meta/llama-3.1-8b-instruct
+
+# 示例3: OpenAI API
+# api_key = sk-xxxxxxxxxxxx
+# base_url = https://api.openai.com/v1
+# model = gpt-4
+
+# 请取消注释并修改上面其中一组配置
+api_key = your_api_key_here
+base_url = https://your-api-endpoint/v1
+model = your_model_name_here
+
 # 最大输出tokens（设置为更大的值，避免截断）
 max_tokens = 80000
 
